@@ -4,6 +4,7 @@ import time
 import os
 import random
 from PIL import Image
+import urllib
 from Button import *
 from Player import *
 from ordered_list_iterative import *
@@ -52,6 +53,9 @@ INITIAL_PIXELATION = 0.0125
 PIXELATION_INCREMENT = 0.001
 
 # Game constants
+practice_mode = False
+char_list = []
+char_dict = {}
 TIME_TO_GUESS = 10
 TIME_TO_UNPIXELATE = 15
 
@@ -63,18 +67,22 @@ def display_text(text, font, color, coords):
     textRect = textSurface.get_rect(center = coords)
     screen.blit(textSurface, textRect)
 
-def make_textbox(screen, text, pos, length, height, color, border_width):
+def make_textbox(screen, text, pos, height, color):
     '''Makes a textbox with dynamic length and ability to save user input'''
 
-    text_box = pygame.Rect(pos[0], pos[1], length, height)
+    TEXTBOX_LEN = 1000
+    TEXTBOX_BORDER = 4
+
+    text_box = pygame.Rect(pos[0], pos[1], TEXTBOX_LEN, height)
     text_box.center = (pos[0], pos[1])
-    pygame.draw.rect(screen, color, text_box, border_width)
+    pygame.draw.rect(screen, color, text_box, TEXTBOX_BORDER)
 
     # Handle text
     text_surface = user_input_font.render(text, True, white)
-    text_rect = text_surface.get_rect(center = (screen.get_width()/2, screen.get_height()/2))
+    text_rect = text_surface.get_rect(center = (pos[0], pos[1]))
+    text_box.width = max(TEXTBOX_LEN, text_surface.get_width() + 20)
     screen.blit(text_surface, text_rect)
-    text_box.width = max(length, text_surface.get_width() + 20)
+    # text_box.width = max(TEXTBOX_LEN, text_surface.get_width() + 20)
     return text_box
 
 def make_timer_bar(screen, pos, length, height, color):
@@ -132,15 +140,18 @@ def main_menu():
     '''Displays the main menu screen'''
 
     while True:
+        half_width = screen.get_width()/2
+        ninth_height = screen.get_height()/9
         mouse_pos = pygame.mouse.get_pos()
 
         screen.fill(BACKGROUND_COLOR)
-        display_text("Anime Eyes", title_font, white, (screen.get_width()/2, screen.get_height()/8*2))
+        display_text("Anime Eyes", title_font, white, (half_width, ninth_height*2))
 
-        play_button = Button(image=None, pos=(screen.get_width()/2, (screen.get_height()/8)*4), font=button_font, text_input="PLAY (Enter)", base_color=white, hover_color=grey)
-        options_button = Button(image=None, pos=(screen.get_width()/2, (screen.get_height()/8)*5), font=button_font, text_input="OPTIONS (O)", base_color=white, hover_color=grey)
-        quit_button = Button(image=None, pos=(screen.get_width()/2, (screen.get_height()/8)*6), font=button_font, text_input="QUIT (Q)", base_color=white, hover_color=grey)
-        for button in [play_button, options_button, quit_button]:
+        party_mode_button = Button(image=None, pos=(half_width, ninth_height*4), font=button_font, text_input="Party Mode (1)", base_color=white, hover_color=grey)
+        practice_mode_button = Button(image=None, pos=(half_width, ninth_height*5), font=button_font, text_input="Practice Mode (2)", base_color=white, hover_color=grey)
+        options_button = Button(image=None, pos=(half_width, ninth_height*6), font=button_font, text_input="OPTIONS (O)", base_color=white, hover_color=grey)
+        quit_button = Button(image=None, pos=(half_width, ninth_height*7), font=button_font, text_input="QUIT (Q)", base_color=white, hover_color=grey)
+        for button in [party_mode_button, practice_mode_button, options_button, quit_button]:
             button.changeColor(mouse_pos)
             button.update(screen)
 
@@ -149,16 +160,20 @@ def main_menu():
                 pygame.quit()
                 sys.exit()
             if event.type == pygame.MOUSEBUTTONDOWN:
-                if play_button.checkForInput(mouse_pos):
-                    setup()
+                if party_mode_button.checkForInput(mouse_pos):
+                    party_setup()
+                if practice_mode_button.checkForInput(mouse_pos):
+                    practice_setup()
                 if options_button.checkForInput(mouse_pos):
                     options()
                 if quit_button.checkForInput(mouse_pos):
                     pygame.quit()
                     sys.exit()
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_RETURN:
-                    setup()
+                if event.key == pygame.K_1:
+                    party_setup()
+                if event.key == pygame.K_2:
+                    practice_setup()
                 if event.key == pygame.K_o:
                     options()
                 if event.key == pygame.K_q:
@@ -171,12 +186,14 @@ def options():
     '''Displays the options screen'''
 
     while True:
+        half_width = screen.get_width()/2
+        eighth_height = screen.get_height()/8
         mouse_pos = pygame.mouse.get_pos()
 
         screen.fill(BACKGROUND_COLOR)
         # display_text("Options", title_font, white, (screen.get_width()/2, screen.get_height()/8*2))
 
-        menu_button = Button(image=None, pos=(screen.get_width()/2, (screen.get_height()/8)*1), font=button_font, text_input="Back to Menu", base_color=white, hover_color=grey)
+        menu_button = Button(image=None, pos=(half_width, eighth_height), font=button_font, text_input="Back to Menu", base_color=white, hover_color=grey)
         for button in [menu_button]:
             button.changeColor(mouse_pos)
             button.update(screen)
@@ -191,17 +208,19 @@ def options():
 
         pygame.display.update()
 
-def setup():
-    '''Displays the set-up screen'''
+def party_setup():
+    '''Displays the set-up screen for party mode'''
 
     while True:
+        quarter_width = screen.get_width()/4
+        eighth_height = screen.get_height()/8
         mouse_pos = pygame.mouse.get_pos()
 
         screen.fill(BACKGROUND_COLOR)
 
-        add_new_player_button = Button(image=None, pos=(screen.get_width()/4, (screen.get_height()/8)*3), font=button_font, text_input="Add new Player (N)", base_color=white, hover_color=grey)
-        start_game_button = Button(image=None, pos=(screen.get_width()/4, (screen.get_height()/8)*4), font=button_font, text_input="Start Game (Space)", base_color=white, hover_color=grey)
-        menu_button = Button(image=None, pos=(screen.get_width()/4, (screen.get_height()/8)*5), font=button_font, text_input="Back to Menu (Esc)", base_color=white, hover_color=grey)
+        add_new_player_button = Button(image=None, pos=(quarter_width, eighth_height*3), font=button_font, text_input="Add new Player (N)", base_color=white, hover_color=grey)
+        start_game_button = Button(image=None, pos=(quarter_width, eighth_height*4), font=button_font, text_input="Start Game (Space)", base_color=white, hover_color=grey)
+        menu_button = Button(image=None, pos=(quarter_width, eighth_height*5), font=button_font, text_input="Back to Menu (Esc)", base_color=white, hover_color=grey)
         for button in [add_new_player_button, start_game_button, menu_button]:
             button.changeColor(mouse_pos)
             button.update(screen)
@@ -209,7 +228,7 @@ def setup():
         # Make and display player buttons
         player_buttons = []
         for i in range(players.size()):
-            player_buttons.append(Button(image=None, pos=(screen.get_width()/4*3, (screen.get_height()/20)*(i + 1)), font=user_input_font, text_input=players.get_item(i).name, base_color=white, hover_color=red))
+            player_buttons.append(Button(image=None, pos=(quarter_width*3, (screen.get_height()/20)*(i + 1)), font=user_input_font, text_input=players.get_item(i).name, base_color=white, hover_color=red))
             player_buttons[i].changeColor(mouse_pos)
             player_buttons[i].update(screen)
         
@@ -247,19 +266,19 @@ def add_new_player():
     '''Displays the screen to add players to the game'''
 
     NAME_MAX_LEN = 30
-    TEXTBOX_LEN = 1000
-    TEXTBOX_BORDER = 4
     name = ""
-
     while True:
+        half_width = screen.get_width()/2
+        third_width = screen.get_width()/3
+        eighth_height = screen.get_height()/8
         mouse_pos = pygame.mouse.get_pos()
 
         screen.fill(BACKGROUND_COLOR)
-        display_text("Enter Name", title_font, white, (screen.get_width()/2, screen.get_height()/8*3))
-        make_textbox(screen, name, (screen.get_width()/2, screen.get_height()/2), TEXTBOX_LEN, user_input_font_size + 20, white, TEXTBOX_BORDER)
+        display_text("Enter Name", title_font, white, (half_width, eighth_height*3))
+        make_textbox(screen, name, (half_width, eighth_height*4), user_input_font_size + 20, white)
 
-        cancel_button = Button(image=None, pos=(screen.get_width()/3, (screen.get_height()/8)*5), font=button_font, text_input="Cancel (Esc)", base_color=white, hover_color=grey)
-        submit_button = Button(image=None, pos=(screen.get_width()/3*2, (screen.get_height()/8)*5), font=button_font, text_input="Submit (Enter)", base_color=white, hover_color=grey)
+        cancel_button = Button(image=None, pos=(third_width, eighth_height*5), font=button_font, text_input="Cancel (Esc)", base_color=white, hover_color=grey)
+        submit_button = Button(image=None, pos=(third_width*2, eighth_height*5), font=button_font, text_input="Submit (Enter)", base_color=white, hover_color=grey)
         for button in [cancel_button, submit_button]:
             button.changeColor(mouse_pos)
             button.update(screen)
@@ -270,14 +289,14 @@ def add_new_player():
                 sys.exit()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if cancel_button.checkForInput(mouse_pos):
-                    setup()
+                    party_setup()
                 if submit_button.checkForInput(mouse_pos) and name != "":
                     buzzer_setup(name)
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_BACKSPACE:
                     name = name[:-1]
                 elif event.key == pygame.K_ESCAPE:
-                    setup()
+                    party_setup()
                 elif event.key == pygame.K_RETURN and name != "":
                     buzzer_setup(name)
                 else:
@@ -290,11 +309,13 @@ def add_new_player():
 def buzzer_setup(name):
     '''Displays the screen to map buttons to each player'''
     while True:
+        half_width = screen.get_width()/2
+        fifth_height = screen.get_height()/5
         same_buzzer = False
 
         screen.fill(BACKGROUND_COLOR)
-        display_text(name, title_font, white, (screen.get_width()/2, screen.get_height()/5*2))
-        display_text("Hit your buzzer", title_font, white, (screen.get_width()/2, screen.get_height()/5*3))
+        display_text(name, title_font, white, (half_width, fifth_height*2))
+        display_text("Hit your buzzer", title_font, white, (half_width, fifth_height*3))
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -308,8 +329,108 @@ def buzzer_setup(name):
                         break
                 if not same_buzzer:
                     players.add(Player(name, 0, event.key))
-                    setup()
+                    party_setup()
         
+        pygame.display.update()
+
+def practice_setup():
+    '''Displays the set-up screen for practice mode'''
+
+    global char_list
+    global char_dict
+    username = ""
+    error = False
+    while True:
+        mouse_pos = pygame.mouse.get_pos()
+        half_width = screen.get_width()/2
+        third_width = screen.get_width()/3
+        ninth_height = screen.get_height()/9
+        screen.fill(BACKGROUND_COLOR)
+
+        display_text("AniList username:", title_font, white, (half_width, ninth_height*3))
+        display_text("(None for manual image input)", button_font, white, (half_width, ninth_height*4))
+        make_textbox(screen, username, (half_width, ninth_height*5), user_input_font_size + 20, white)
+        cancel_button = Button(image=None, pos=(third_width, ninth_height*6), font=button_font, text_input="Cancel (Esc)", base_color=white, hover_color=grey)
+        submit_button = Button(image=None, pos=(third_width*2, ninth_height*6), font=button_font, text_input="Submit (Enter)", base_color=white, hover_color=grey)
+        for button in [cancel_button, submit_button]:
+            button.changeColor(mouse_pos)
+            button.update(screen)
+        if error:
+            display_text("Error occurred, check for spelling or connection issues", user_input_font, red, (half_width, ninth_height*8))
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_BACKSPACE:
+                    username = username[:-1]
+                elif event.key == pygame.K_ESCAPE:
+                    main_menu()
+                elif event.key == pygame.K_RETURN:
+                    char_list, char_dict = character_list(username)
+                    if char_dict == None:
+                        # Error, possibly incorrect username
+                        error = True
+                    else:
+                        practice_length(char_dict)
+                else:
+                    # if (event.unicode != '\r'):
+                    username += event.unicode
+
+        pygame.display.update()
+
+def practice_length(char_dict):
+    '''Displays the length selector for the practice mode.
+       Player can choose how many images are used for the game'''
+
+    global practice_mode
+    game_length = ""
+    while True:
+        half_width = screen.get_width()/2
+        third_width = screen.get_width()/3
+        ninth_height = screen.get_height()/9
+        mouse_pos = pygame.mouse.get_pos()
+        screen.fill(BACKGROUND_COLOR)
+
+        display_text("Enter desired # of rounds:", title_font, white, (half_width, ninth_height*3))
+        display_text("(Maximum number of rounds: " + str(len(char_dict)) + ")", button_font, white, (half_width, ninth_height*4))
+        make_textbox(screen, game_length, (half_width, ninth_height*5), user_input_font_size + 20, white)
+        cancel_button = Button(image=None, pos=(third_width, ninth_height*6), font=button_font, text_input="Cancel (Esc)", base_color=white, hover_color=grey)
+        submit_button = Button(image=None, pos=(third_width*2, ninth_height*6), font=button_font, text_input="Submit (Enter)", base_color=white, hover_color=grey)
+        for button in [cancel_button, submit_button]:
+            button.changeColor(mouse_pos)
+            button.update(screen)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_BACKSPACE:
+                    game_length = game_length[:-1]
+                elif event.key == pygame.K_ESCAPE:
+                    practice_setup()
+                elif event.key == pygame.K_RETURN:
+                    try:
+                        game_length_int = (int)(game_length)
+                    except:
+                        break
+                    if (game_length_int > len(char_list) or game_length_int <= 0):
+                        break
+                    else:
+                        # Download game_length_int random character portraits
+                        for n in random.sample(range(game_length_int), game_length_int):
+                            char_name = char_list[n]
+                            url = char_dict[char_name].img_url
+                            path = "./images/" + char_name
+                            urllib.request.urlretrieve(url, path)
+                        practice_mode = True
+                        countdown()
+                else:
+                    if (event.unicode != '\r'):
+                        game_length += event.unicode
+
         pygame.display.update()
 
 def countdown():
@@ -317,16 +438,18 @@ def countdown():
 
     start = time.time()
     while True:
+        half_width = screen.get_width()/2
+        half_height = screen.get_height()/2
         screen.fill(BACKGROUND_COLOR)
         if (time.time() - start < 1):
             # 0-1 seconds have passed
-            display_text("3", title_font, white, (screen.get_width()/2, screen.get_height()/2))
+            display_text("3", title_font, white, (half_width, half_height))
         elif (time.time() - start < 2):
             # 1-2 seconds have passed
-            display_text("2", title_font, white, (screen.get_width()/2, screen.get_height()/2))
+            display_text("2", title_font, white, (half_width, half_height))
         elif (time.time() - start < 3):
             # 2-3 seconds have passed
-            display_text("1", title_font, white, (screen.get_width()/2, screen.get_height()/2))
+            display_text("1", title_font, white, (half_width, half_height))
         else:
             play()
         
@@ -350,6 +473,8 @@ def play(pixelation=INITIAL_PIXELATION):
     start = time.time()
 
     while True:
+        half_width = screen.get_width()/2
+        half_height = screen.get_height()/2
         screen.fill(BACKGROUND_COLOR)
 
         if pixelation < 0.25:
@@ -372,7 +497,7 @@ def play(pixelation=INITIAL_PIXELATION):
         #     pixel_img = "./images/" + rand_pic_name
 
         background = pygame.image.load(pixel_img)
-        rect = background.get_rect(center = (screen.get_width()/2, screen.get_height()/2))
+        rect = background.get_rect(center = (half_width, half_height))
         screen.blit(background, rect)
 
         for event in pygame.event.get():
@@ -396,19 +521,24 @@ def guess(player, img_name, pixelation):
     TEXTBOX_LEN = 1000
     TEXTBOX_BORDER = 4
     guess = ""
-    img_name = img_name[0:img_name.rfind('.')]
-    character_name_array = img_name.split(" ")
-    for i in range(len(character_name_array)):
-        character_name_array[i] = character_name_array[i].lower()
+    img_name = img_name[0:img_name.rfind('.')]      # Name of image before '.'
+    if not practice_mode:
+        character_name_array = img_name.split(" ")
+        for i in range(len(character_name_array)):
+            character_name_array[i] = character_name_array[i].lower()
+    else:
+        character_name_array = char_dict[img_name]
 
     start = time.time()
 
     while True:
+        half_width = screen.get_width()/2
+        eighth_height = screen.get_height()/8
         screen.fill(BACKGROUND_COLOR)
-        display_text(player.name, title_font, white, (screen.get_width()/2, screen.get_height()/8*3))
-        make_textbox(screen, guess, (screen.get_width()/2, screen.get_height()/8*4), TEXTBOX_LEN, user_input_font_size + 20, white, TEXTBOX_BORDER)
+        display_text(player.name, title_font, white, (half_width, eighth_height*3))
+        make_textbox(screen, guess, (half_width, eighth_height*4), user_input_font_size + 20, white)
 
-        make_timer_bar(screen, (screen.get_width()/2, screen.get_height()/8*5), ((start + TIME_TO_GUESS - time.time()) * 100), user_input_font_size, red)
+        make_timer_bar(screen, (half_width, eighth_height*5), ((start + TIME_TO_GUESS - time.time()) * 100), user_input_font_size, red)
 
         if time.time() - start >= TIME_TO_GUESS:
             player2 = players.remove(player)
@@ -448,6 +578,8 @@ def show_original_image():
     '''Reveals the original image after a correct guess'''
 
     while True:
+        half_width = screen.get_width()/2
+        half_height = screen.get_height()/2
         screen.fill(BACKGROUND_COLOR)
         image = Image.open("./images/" + random_img_list[random_img_indx - 1])
         resize_ratio = fit_screen_ratio(screen, image)
@@ -456,7 +588,7 @@ def show_original_image():
         resized_image.save(path)
 
         background = pygame.image.load(path)
-        rect = background.get_rect(center = (screen.get_width()/2, screen.get_height()/2))
+        rect = background.get_rect(center = (half_width, half_height))
         screen.blit(background, rect)
 
         for event in pygame.event.get():
@@ -475,18 +607,21 @@ def scoreboard():
 
     global random_img_indx
     global random_img_list
+    global practice_mode
     game_over = random_img_indx >= num_imgs
 
     while True:
+        half_width = screen.get_width()/2
+        twentieth_height = screen.get_height()/20
         screen.fill(BACKGROUND_COLOR)
         if game_over:
-            display_text("End of Game!", title_font, red, (screen.get_width()/2, screen.get_height()/20))
+            display_text("End of Game!", title_font, red, (half_width, twentieth_height))
         else:
-            display_text("Scoreboard", title_font, white, (screen.get_width()/2, screen.get_height()/20))
+            display_text("Scoreboard", title_font, white, (half_width, twentieth_height))
 
         for i in range(players.size()):
             player = players.get_item(i)
-            display_text(player.name + ": " + str(player.score), user_input_font, white, (screen.get_width()/2, (screen.get_height()/20)*(i + 3)))
+            display_text(player.name + ": " + str(player.score), user_input_font, white, (half_width, twentieth_height*(i + 3)))
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -506,6 +641,7 @@ def scoreboard():
                         random_img_list = []
                         for i in random.sample(range(num_imgs), num_imgs):
                             random_img_list.append(img_list[i])
+                        practice_mode = False
                         main_menu()
 
         pygame.display.update()
