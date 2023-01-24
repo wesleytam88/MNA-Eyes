@@ -27,6 +27,8 @@ query ($name: String) {             # Define variables to be used in query (id)
                         nodes {
                             name {
                                 full
+                                first
+                                last
                                 alternative
                                 alternativeSpoiler
                             }
@@ -46,7 +48,8 @@ def character_list(username):
     '''Returns a hash table of a user's characters from the animes they watch.
     Only stores main characters (as determined by AniList) and characters from
     certain lists (completed and rewatching)'''
-    char_list = {}
+    char_list = []
+    char_dict = {}
     variables = create_vars(username)
     response = requests.post(url, json={'query':query, 'variables':variables})
     response = response.json()    # Turn json into hash table
@@ -76,12 +79,18 @@ def character_list(username):
                 for node in nodes:
                     names = node['name']
                     full_name = names['full']
+                    first_name = names['first']
+                    last_name = names['last']
                     alt_names = names['alternative']
                     alt_names += names['alternativeSpoiler']
                     image = node['image']
                     img_link = image['large']
-                    if full_name not in char_list.keys():
+
+                    char_list.append(full_name)
+                    if full_name not in char_dict.keys():
                         # Use names as keys, may skip chars if same full name
                         # May not use most popular title char was in as title
-                        char_list[full_name] = Character(full_name, alt_names, img_link, title)
-    return char_list
+                        char_dict[full_name] = Character(full_name, first_name,
+                                                         last_name, alt_names,
+                                                         img_link, title)
+    return (char_list, char_dict)
