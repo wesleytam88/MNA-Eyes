@@ -72,16 +72,16 @@ def character_list(username):
                 if len(characters['nodes']) == 0:
                     # Anime has no main characters
                     break
-                nodes = characters['nodes'][0]  # characters['nodes'] is a list
-                names = nodes['name']
-                full_name = names['full']
-                alt_names = names['alternative']
-                alt_names += names['alternativeSpoiler']
-                image = nodes['image']
-                img_link = image['large']
-                if full_name not in char_list.keys():
-                    # Use name as keys, may skip chars if same first/last name
-                    # May not use most popular title char was in as the title
-                    char_list[full_name] = Character(full_name, alt_names, 
-                                                    img_link, title)
+                nodes = characters['nodes']  # characters['nodes'] is a list
+                for node in nodes:
+                    names = node['name']
+                    full_name = names['full']
+                    alt_names = names['alternative']
+                    alt_names += names['alternativeSpoiler']
+                    image = node['image']
+                    img_link = image['large']
+                    if full_name not in char_list.keys():
+                        # Use names as keys, may skip chars if same full name
+                        # May not use most popular title char was in as title
+                        char_list[full_name] = Character(full_name, alt_names, img_link, title)
     return char_list
