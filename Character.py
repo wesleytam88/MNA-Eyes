@@ -1,8 +1,10 @@
 class Character():
-    def __init__(self, name, alt_names, char_img, anime):
-        self.name = name
+    def __init__(self, full_name, first_name, last_name, alt_names, img_url, anime):
+        self.full_name = full_name
+        self.first_name = first_name
+        self.last_name = last_name
         self.alt_names = alt_names
-        self.char_img = char_img
+        self.img_url = img_url
         self.anime = anime
 
     def __repr__(self):
