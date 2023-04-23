@@ -4,7 +4,6 @@ import time
 import os
 import random
 from PIL import Image
-import urllib
 from Button import *
 from Player import *
 from ordered_list_iterative import *
@@ -42,7 +41,7 @@ players = OrderedList()
 # Image variables
 num_imgs = len([name for name in os.listdir("./images")])
 img_list = os.listdir("./images")
-random_img_indx = (int)(0)    # Which random image are we on
+random_img_indx = 0    # Which random image are we on
 random_img_list = []
 for i in random.sample(range(num_imgs), num_imgs):
     random_img_list.append(img_list[i])
@@ -373,22 +372,16 @@ def play(pixelation=INITIAL_PIXELATION):
 
         if pixelation < 0.25:
             pixel_img = pixelate(rand_pic_name, pixelation)
-            pixelation += PIXELATION_INCREMENT * 1
+            pixelation += PIXELATION_INCREMENT * 2
         elif pixelation < 0.5:
             pixel_img = pixelate(rand_pic_name, pixelation)
-            pixelation += PIXELATION_INCREMENT * 2
+            pixelation += PIXELATION_INCREMENT * 5
         elif pixelation < 0.75:
             pixel_img = pixelate(rand_pic_name, pixelation)
             pixelation += PIXELATION_INCREMENT * 10
         elif pixelation < 1:
             pixel_img = pixelate(rand_pic_name, pixelation)
-            pixelation += PIXELATION_INCREMENT * 10
-
-        # if (time.time() - start <= TIME_TO_UNPIXELATE):
-        #     pixel_img = pixelate(rand_pic_name, pixelation)
-        #     pixelation += PIXELATION_INCREMENT
-        # else:
-        #     pixel_img = "./images/" + rand_pic_name
+            pixelation += PIXELATION_INCREMENT * 20
 
         background = pygame.image.load(pixel_img)
         rect = background.get_rect(center = (half_width, half_height))
@@ -408,21 +401,13 @@ def play(pixelation=INITIAL_PIXELATION):
 
 def guess(player, img_name, pixelation):
     '''Guessing page of the game. Takes in a Player object, the name of the
-       image, and the pixelation so if player guesses wrong, can resume
-       at same pixelation'''
-
+       image, and the current pixelation level'''
     global random_img_indx
-    TEXTBOX_LEN = 1000
-    TEXTBOX_BORDER = 4
-    guess = ""
-    img_name = img_name[0:img_name.rfind('.')]      # Name of image before '.'
-    if not practice_mode:
-        character_name_array = img_name.split(" ")
-        for i in range(len(character_name_array)):
-            character_name_array[i] = character_name_array[i].lower()
-    else:
-        character_name_array = char_dict[img_name]
 
+    guesser = players.remove(player)
+
+    img_name = img_name[0:img_name.rfind('.')]      # Name of image before '.'
+    print("Image name: " + img_name)
     start = time.time()
 
     while True:
@@ -430,15 +415,14 @@ def guess(player, img_name, pixelation):
         eighth_height = screen.get_height()/8
         screen.fill(BACKGROUND_COLOR)
         display_text(player.name, title_font, white, (half_width, eighth_height*3))
-        make_textbox(screen, guess, (half_width, eighth_height*4), user_input_font_size + 20, white)
 
         make_timer_bar(screen, (half_width, eighth_height*5), ((start + TIME_TO_GUESS - time.time()) * 100), user_input_font_size, red)
 
         if time.time() - start >= TIME_TO_GUESS:
-            player2 = players.remove(player)
-            player2.score -= (int)((1 - pixelation) * 100)
-            players.add(player2)
-            play(INITIAL_PIXELATION)
+            # Guesser out of time
+            guesser.score -= (int)((1 - pixelation) * 100)
+            players.add(guesser)
+            play(pixelation)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -446,25 +430,17 @@ def guess(player, img_name, pixelation):
                 pygame.quit()
                 sys.exit()
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_BACKSPACE:
-                    guess = guess[:-1]
-                elif event.key == pygame.K_RETURN and guess != "":
-                    player2 = players.remove(player)
-                    if guess.lower() in character_name_array:
-                        # Correct guess
-                        random_img_indx += 1
-                        player2.score += (int)((1 - pixelation) * 100)
-                        players.add(player2)
-                        show_original_image()
-                    else:
-                        # Incorrect guess
-                        player2.score -= (int)((1 - pixelation) * 100)
-                        players.add(player2)
-                        play(pixelation)
-                else:
-                    if event.unicode != '\r':
-                        # Fix ENTER being a valid name
-                        guess += event.unicode
+                if event.key == pygame.K_y:
+                    # Press 'y' for correct guess
+                    random_img_indx += 1
+                    guesser.score += (int)((1 - pixelation) * 100)
+                    players.add(guesser)
+                    show_original_image()
+                elif event.key == pygame.K_n:
+                    # Press 'n' for incorrect guess
+                    guesser.score -= (int)((1 - pixelation) * 100)
+                    players.add(guesser)
+                    play(pixelation)
 
         pygame.display.update()
 
