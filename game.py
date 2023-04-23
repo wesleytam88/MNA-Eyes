@@ -8,7 +8,6 @@ import urllib
 from Button import *
 from Player import *
 from ordered_list_iterative import *
-from anilist_bot import *
 
 # Initialize pygame
 pygame.init()
@@ -147,11 +146,10 @@ def main_menu():
         screen.fill(BACKGROUND_COLOR)
         display_text("Anime Eyes", title_font, white, (half_width, ninth_height*2))
 
-        party_mode_button = Button(image=None, pos=(half_width, ninth_height*4), font=button_font, text_input="Party Mode (1)", base_color=white, hover_color=grey)
-        practice_mode_button = Button(image=None, pos=(half_width, ninth_height*5), font=button_font, text_input="Practice Mode (2)", base_color=white, hover_color=grey)
+        party_mode_button = Button(image=None, pos=(half_width, ninth_height*5), font=button_font, text_input="Party Mode (1)", base_color=white, hover_color=grey)
         options_button = Button(image=None, pos=(half_width, ninth_height*6), font=button_font, text_input="OPTIONS (O)", base_color=white, hover_color=grey)
         quit_button = Button(image=None, pos=(half_width, ninth_height*7), font=button_font, text_input="QUIT (Q)", base_color=white, hover_color=grey)
-        for button in [party_mode_button, practice_mode_button, options_button, quit_button]:
+        for button in [party_mode_button, options_button, quit_button]:
             button.changeColor(mouse_pos)
             button.update(screen)
 
@@ -162,8 +160,6 @@ def main_menu():
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if party_mode_button.checkForInput(mouse_pos):
                     party_setup()
-                if practice_mode_button.checkForInput(mouse_pos):
-                    practice_setup()
                 if options_button.checkForInput(mouse_pos):
                     options()
                 if quit_button.checkForInput(mouse_pos):
@@ -172,8 +168,6 @@ def main_menu():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_1:
                     party_setup()
-                if event.key == pygame.K_2:
-                    practice_setup()
                 if event.key == pygame.K_o:
                     options()
                 if event.key == pygame.K_q:
@@ -331,106 +325,6 @@ def buzzer_setup(name):
                     players.add(Player(name, 0, event.key))
                     party_setup()
         
-        pygame.display.update()
-
-def practice_setup():
-    '''Displays the set-up screen for practice mode'''
-
-    global char_list
-    global char_dict
-    username = ""
-    error = False
-    while True:
-        mouse_pos = pygame.mouse.get_pos()
-        half_width = screen.get_width()/2
-        third_width = screen.get_width()/3
-        ninth_height = screen.get_height()/9
-        screen.fill(BACKGROUND_COLOR)
-
-        display_text("AniList username:", title_font, white, (half_width, ninth_height*3))
-        display_text("(None for manual image input)", button_font, white, (half_width, ninth_height*4))
-        make_textbox(screen, username, (half_width, ninth_height*5), user_input_font_size + 20, white)
-        cancel_button = Button(image=None, pos=(third_width, ninth_height*6), font=button_font, text_input="Cancel (Esc)", base_color=white, hover_color=grey)
-        submit_button = Button(image=None, pos=(third_width*2, ninth_height*6), font=button_font, text_input="Submit (Enter)", base_color=white, hover_color=grey)
-        for button in [cancel_button, submit_button]:
-            button.changeColor(mouse_pos)
-            button.update(screen)
-        if error:
-            display_text("Error occurred, check for spelling or connection issues", user_input_font, red, (half_width, ninth_height*8))
-
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_BACKSPACE:
-                    username = username[:-1]
-                elif event.key == pygame.K_ESCAPE:
-                    main_menu()
-                elif event.key == pygame.K_RETURN:
-                    char_list, char_dict = character_list(username)
-                    if char_dict == None:
-                        # Error, possibly incorrect username
-                        error = True
-                    else:
-                        practice_length(char_dict)
-                else:
-                    # if (event.unicode != '\r'):
-                    username += event.unicode
-
-        pygame.display.update()
-
-def practice_length(char_dict):
-    '''Displays the length selector for the practice mode.
-       Player can choose how many images are used for the game'''
-
-    global practice_mode
-    game_length = ""
-    while True:
-        half_width = screen.get_width()/2
-        third_width = screen.get_width()/3
-        ninth_height = screen.get_height()/9
-        mouse_pos = pygame.mouse.get_pos()
-        screen.fill(BACKGROUND_COLOR)
-
-        display_text("Enter desired # of rounds:", title_font, white, (half_width, ninth_height*3))
-        display_text("(Maximum number of rounds: " + str(len(char_dict)) + ")", button_font, white, (half_width, ninth_height*4))
-        make_textbox(screen, game_length, (half_width, ninth_height*5), user_input_font_size + 20, white)
-        cancel_button = Button(image=None, pos=(third_width, ninth_height*6), font=button_font, text_input="Cancel (Esc)", base_color=white, hover_color=grey)
-        submit_button = Button(image=None, pos=(third_width*2, ninth_height*6), font=button_font, text_input="Submit (Enter)", base_color=white, hover_color=grey)
-        for button in [cancel_button, submit_button]:
-            button.changeColor(mouse_pos)
-            button.update(screen)
-
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_BACKSPACE:
-                    game_length = game_length[:-1]
-                elif event.key == pygame.K_ESCAPE:
-                    practice_setup()
-                elif event.key == pygame.K_RETURN:
-                    try:
-                        game_length_int = (int)(game_length)
-                    except:
-                        break
-                    if (game_length_int > len(char_list) or game_length_int <= 0):
-                        break
-                    else:
-                        # Download game_length_int random character portraits
-                        for n in random.sample(range(game_length_int), game_length_int):
-                            char_name = char_list[n]
-                            url = char_dict[char_name].img_url
-                            path = "./images/" + char_name
-                            urllib.request.urlretrieve(url, path)
-                        practice_mode = True
-                        countdown()
-                else:
-                    if (event.unicode != '\r'):
-                        game_length += event.unicode
-
         pygame.display.update()
 
 def countdown():
